@@ -34,7 +34,7 @@ We compare a majority-class baseline, multinomial logistic regression, a decisio
 
 ## Results
 
-    Model                     |   Accuracy
+   Model                     |   Accuracy
 
  - Random Forest              |
  - Decision Tree              |
