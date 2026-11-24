@@ -1,0 +1,248 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{itemsep=1pt,topsep=3pt}
+\graphicspath{{figures/}}
+\let\oldus\_
+\renewcommand{\_}{\oldus\allowbreak}
+\emergencystretch=2em
+\setlength{\textfloatsep}{8pt}
+\setlength{\floatsep}{6pt}
+\setlength{\abovecaptionskip}{3pt}
+
+% Placeholder marker. Delete the \todo{} calls as sections get written.
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}}
+
+\title{\vspace{-1.5cm}\textbf{Predicting Human Development Level from Economic Indicators}\\
+\large DS203: Programming for Data Science, Group Project}
+\author{\normalsize Vedant Iyengar (25B2141) \quad Rehan Mallik (25B0408)
+  \quad Siddhartha Nair (25B3990)}
+\date{\vspace{-0.6cm}}
+
+\begin{document}
+\maketitle
+
+% =====================================================================
+\section{Introduction}
+% =====================================================================
+
+The UNDP's Human Development Index (HDI) combines life expectancy, education
+and income into one score, but it is published with a lag and is missing for
+some countries: Monaco and North Korea have no 2023 value, and 22
+territories tracked by the World Bank have none at all. World Bank
+indicators on the economy, infrastructure and health are released more
+often and for more economies. If they can predict a country's HDI tier
+(three classes, Low / Medium-High / Very High), they can give an early
+estimate where the HDI is late or absent, and show which measurable
+characteristics are most closely associated with human development. We
+compare a majority-class baseline, multinomial logistic regression, a
+decision tree and a random forest, with and without PCA.
+
+% =====================================================================
+\section{Methodology}
+% =====================================================================
+
+\subsection{Dataset Download and Setup}
+
+This process included us combining two different datasets, one from UNDP
+HDI (composite-indices time series, 2023
+HDI and region) and other from WBG API (\texttt{wbgapi}, the required
+indicator list as per project doc, 2023 values). Merging
+datasets by country (ISO-3 code). These are the countries/locations that had
+to be dropped because of a lack of data: World Bank aggregates
+(e.g.\ \texttt{WLD}, \texttt{HIC}) and 22 territories (e.g.\ ABW, BMU, PRI,
+MAC, XKX). These 2 countries do not have a registered HDI\_2023 score: MCO
+and PRK. Encoding our target response variable as per project requirement,
+and creating \texttt{Services} and \texttt{Dominant\_Sector} as per project
+doc, gives 195 countries. Source URLs are in \texttt{Data\_Dictionary.md}.
+
+\subsection{Exploratory Data Analysis}
+\label{sec:eda}
+
+\paragraph{Dataset overview.} The dataset covers 195 countries across 14
+columns, including 10 numerical predictors, 2 categorical predictors, 1
+country identifier, and the target variable \texttt{Level}. The target
+variable \texttt{Level} is not evenly distributed: 1.0 accounts for 47.69\%
+(93 countries), 2.0 for 37.95\% (74), and 0.0 for 13.33\% (26).
+\texttt{Dominant\_Sector} is derived from these shares, so including all of
+them together could introduce redundancy.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Features, missing counts (of 195) and class medians.}
+\label{tab:features}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Feature (unit) & Missing & \multicolumn{3}{c}{Median by class} \\
+\cmidrule(l){3-5}
+ & & 0 & 1 & 2 \\
+\midrule
+Internet users (\% pop.)        & 15 & 23.7 & 70.4 & 92.2 \\
+Infant mortality (per 1{,}000)  & 2  & 45.7 & 17.7 & 4.0 \\
+Access to electricity (\% pop.) & 0  & 45.4 & 99.3 & 100 \\
+Agriculture (\% GDP)            & 12 & 29.0 & 9.9  & 2.1 \\
+Services (\% GDP)               & 12 & 50.4 & 60.2 & 72.8 \\
+Trade (\% GDP)                  & 28 & 55.3 & 76.2 & 107.3 \\
+Industry (\% GDP)               & 11 & 22.2 & 26.8 & 23.7 \\
+Inflation (annual \%)           & 20 & 7.1  & 6.0  & 5.0 \\
+Unemployment (\% labour force)  & 18 & 4.5  & 5.3  & 5.2 \\
+GDP growth (annual \%)          & 6  & 4.3  & 3.5  & 2.0 \\
+Dominant\_Sector / Region       & 12 / 44 & \multicolumn{3}{c}{categorical} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Missing value patterns.} Every labeled row with a missing
+\texttt{Region} belongs to Class 2.0 (43 out of 43). This shows that
+missingness in \texttt{Region} is systematic and strongly associated with
+\texttt{Level = 2.0}, rather than occurring at random. Most macroeconomic
+and digital-access metrics have noticeably higher missing rates in Class
+0.0: \texttt{Inflation\_consumer\_prices},
+\texttt{Individuals\_using\_the\_Internet}, and \texttt{Trade} are each
+missing in 19.2\% of Class 0.0 countries (compared to 2.7\%, 0\%, and 9.5\%,
+respectively, in Class 2.0). Imputing with a single global mean or median
+could blur real differences between classes.
+
+\paragraph{Numerical distributions \& outliers.}
+\texttt{Inflation\_consumer\_prices} (17 upper outliers, up to 221.3\%) and
+\texttt{Trade} (7 upper outliers, up to 402.6\%) have pronounced right
+tails. \texttt{Access\_to\_electricity} piles up at the 100\% ceiling,
+leaving 31 countries with lower electrification (down to 5.4\%) as
+lower-tail outliers. Overall, several features exhibit strong skewness and
+extreme values, which is worth accounting for when choosing scaling and
+transformation steps for scale-sensitive models.
+
+\paragraph{Patterns across HDI classes \& feature correlations.}
+\texttt{Individuals\_using\_the\_Internet} and \texttt{Infant\_mortality}
+show clear separation across classes. \texttt{Agriculture} decreases with
+HDI, while \texttt{Services} increases (Table~\ref{tab:features}).
+\texttt{Industry}, \texttt{Inflation\_consumer\_prices},
+\texttt{Unemployment\_total}, and \texttt{GDP\_Growth} overlap considerably,
+with differences mainly in their spread and outliers.
+\texttt{Access\_to\_electricity} and \texttt{Individuals\_using\_the\_Internet}
+are strongly positively correlated ($r=0.85$); both are negatively correlated
+with \texttt{Infant\_mortality} ($r=-0.79$ and $-0.83$)
+(Fig.~\ref{fig:eda}b). \texttt{Inflation\_consumer\_prices},
+\texttt{GDP\_Growth}, and \texttt{Unemployment\_total} have virtually no
+linear correlation with other variables (all $|r|<0.20$).
+
+\paragraph{Categorical feature analysis.} EAP, LAC and SA are predominantly
+Class 1, while ECA has a higher proportion of Class 2 countries. SSA has a
+more mixed distribution, with a considerable share of Class 0 and Class 1
+countries (Fig.~\ref{fig:eda}a). Services is the dominant sector for most
+countries (173 out of 193 labelled observations). The smaller categories
+have very few observations, so their distributions should be interpreted
+carefully.
+
+\begin{figure}[h]
+  \centering
+  \begin{subfigure}[b]{0.49\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{region_by_class.png}
+    \caption{Class proportions by region.}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.42\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{correlation_heatmap.png}
+    \caption{Correlation of numerical features.}
+  \end{subfigure}
+  \caption{Exploratory analysis.}
+  \label{fig:eda}
+\end{figure}
+
+\subsection{Preprocessing}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Split:} Removing rows where HDI is NaN. Dropping country
+        name (it does not serve as a predictor). Splitting data into
+        test/train/validation (stratified split i.e.\ roughly each class
+        appears in the same amount in each split): 64/16/20, i.e.\
+        123/31/39 countries, \texttt{random\_state=10}.
+  \item \textbf{Numerical imputation:} Compared to mean imputation, median
+        imputation is more resistant to outliers. As such we went with
+        median imputation (our data has many outliers); we found medians
+        w.r.t.\ train set. But, it is possible that a value being missing is
+        important information to predict the HDI; to account for this
+        possibility, we are adding missing indicators, i.e.\ for each
+        numerical column, we are adding another column where each missing
+        value gets a `1' and rest of the rows are `0'.
+  \item \textbf{Categorical encoding:} missing \texttt{Region} and
+        \texttt{Dominant\_Sector} are filled with ``Missing'', one-hot
+        encoded, and reindexed to the training columns (dealing with unseen
+        categories).
+  \item \textbf{Scaling:} \texttt{RobustScaler} on numerical columns in a
+        \texttt{ColumnTransformer} inside a \texttt{Pipeline}; it currently
+        doesn't scale binary values.
+  \item \textbf{PCA:} We compared the accuracy score of no PCA vs different
+        number of components using PCA. To calculate the accuracy score we
+        used LR and fit it on training set and predicted on the validation
+        set.
+\end{itemize}
+
+\subsection{Models and Evaluation}
+
+\section{Experiments}
+
+\subsection{Preprocessing and PCA}
+
+The class count percentages are approximately the same across train, test
+and validation sets. To inspect principal component loadings, we have
+plotted the first 2 components (that we got after PCA on the training set),
+and their colour depends on their HDI (Fig.~\ref{fig:pca}a). Despite the
+feature data being reduced to 2 features, we can still see that those with
+similar colours are close together, especially the yellow cluster (although
+there are outliers). Table~\ref{tab:loadings} gives the top features which
+contributed the most to each component. N=8 is the ideal value of components
+since it gave high accuracy at a lower value of N (Fig.~\ref{fig:pca}b).
+
+\begin{figure}[h]
+  \centering
+  \begin{subfigure}[b]{0.4\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{pca_scatter.png}
+    \caption{First two components (colour = class).}
+  \end{subfigure}\hspace{1em}
+  \begin{subfigure}[b]{0.4\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{pca_accuracy.png}
+    \caption{Validation accuracy (LR) vs components.}
+  \end{subfigure}
+  \caption{PCA on the training set.}
+  \label{fig:pca}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Top 3 features which contributed the most to each component
+(by absolute loading).}
+\label{tab:loadings}
+\begin{tabular}{@{}llll@{}}
+\toprule
+PC1 & PC2 & PC3 & PC4 \\
+\midrule
+Inflation & Electricity & GDP growth & Unemployment \\
+Trade & Internet & Unemployment & GDP growth \\
+GDP growth & Infant mortality & Trade & Electricity \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Model Comparison}
+
+\subsection{Discussion and Conclusion}
+
+
+\end{document}
