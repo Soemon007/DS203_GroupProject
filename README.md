@@ -10,7 +10,7 @@
 This project aims to classify countries into 3 self-engineered HDI levels based on World Bank indicators on the economy, healthcare, etc.
 We compare a majority-class baseline, multinomial logistic regression, a decision tree and a random forest, with and without PCA. If these models can predict a country’s HDI tier, they can give an early estimate where the HDI is late or absent. 
 
-Video explaining the report is in the ![google drive](https://drive.google.com/drive/folders/1qW_tXh5uZ62qnTF1OdtEX2YPX2sNgLer?usp=drive_link)
+Video explaining the report is in the google drive (submitted via google form)
 
 ---
 
