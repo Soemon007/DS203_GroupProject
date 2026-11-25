@@ -39,10 +39,10 @@ Following are the results that we got:
 
  Model                            | Macro F1 
 
- Majority Class Baseline          | 0.22     
- Multinomial Logistic Regression  | 0.82
- Decision Tree                    | 0.67     
- Random Forest                    | 0.65     
+ Majority Class Baseline          | 0.22      
+ Multinomial Logistic Regression  | 0.82  
+ Decision Tree                    | 0.67       
+ Random Forest                    | 0.65       
 
 ### Takeaways / Observations
 - Every model performs better than the baseline, implying that the signal suggested in the problem statement is real
