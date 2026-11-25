@@ -53,7 +53,7 @@ HDI) and other from \textbf{WBG API} (\texttt{wbgapi}, the required
 indicator list as per project doc, 2023 values, region).
 
 \noindent We merged the datasets on the country (this led to the dropping of aggregates and territories). These 2 countries do not have a registered HDI\_2023 score: MCO
-and PRK. We then encoded our target variable and engineered the required features as per the reequirements of the project document. The exact dtasets used in this project and their sources are in \texttt{Data\_Dictionary.md}.
+and PRK. Where a 2023 World Bank value was missing, we used the most recent earlier year (2018--2022); this was done for 32 values across 19 countries, listed in \texttt{substituted\_years.csv}. We then encoded our target variable and engineered the required features as per the requirements of the project document. The exact datasets used in this project and their sources are in \texttt{Data\_Dictionary.md}.
 
 \subsection{Exploratory Data Analysis}
 \label{sec:eda}
@@ -75,13 +75,16 @@ numerical feature, so that the information carried by a gap is not lost.
 show clear separation across classes. \texttt{Agriculture} decreases with
 HDI, while \texttt{Services} increases. \texttt{Industry}, \texttt{Inflation\_consumer\_prices}, \texttt{Unemployment\_total}, and \texttt{GDP\_Growth} overlap considerably. These positive and negative correlations make intuitive sense and thus reinforce the validity of the dataset
 
-\paragraph{Categorical feature analysis.} EAP, LAC and SA are predominantly
-Class 1, while ECA has a higher proportion of Class 2 countries. SSA has a
-more mixed distribution, with a considerable share of Class 0 and Class 1
-countries (Fig.~\ref{fig:eda}a). Services is the dominant sector for most
-countries (173 out of 193 labelled observations). The smaller categories
-have very few observations, so their distributions should be interpreted
-carefully.
+\paragraph{Categorical feature analysis.} Every labelled country has a World
+Bank region code, and HDI classes split clearly across regions
+(Fig.~\ref{fig:eda}a). \texttt{EAS}, \texttt{LCN} and \texttt{SAS} are mostly
+Class 1 with no Class 0 countries, while \texttt{ECS} (86.3\%) and
+\texttt{NAC} (100\%) are concentrated in Class 2. \texttt{MEA} is spread
+across all three tiers, whereas \texttt{SSF} holds 22 of the 26 Class 0
+countries. Services is the dominant sector in 177 out of 193 labelled
+countries; the Industry (8) and Agriculture (2) groups are too small to read
+much into, so the continuous sector-share columns carry this information
+better.
 
 \begin{figure}[h]
   \centering
