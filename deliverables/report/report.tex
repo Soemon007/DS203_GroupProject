@@ -47,33 +47,39 @@ decision tree and a random forest, with and without PCA to test this very signal
 
 \subsection{Dataset Download and Setup}
 
-This process included us combining two different datasets, one from \textbf{UNDP
-HDI} (composite-indices time series, 2023
-HDI) and other from \textbf{WBG API} (\texttt{wbgapi}, the required
-indicator list as per project doc, 2023 values, region).
+\paragraph{Data sources and merging.} We combined 2023 HDI scores from the \textbf{UNDP HDI} time series with 2023 development indicators and region codes from the \textbf{World Bank API} (\texttt{wbgapi}). Merging on country code gave 195 countries and automatically dropped regional aggregates and territories. Two of these countries (\texttt{MCO} and \texttt{PRK}) do not have a 2023 HDI score and are dropped before training. Where a 2023 World Bank value was missing, we used the most recent earlier year (2018--2022)---affecting 32 values across 19 countries, logged in \texttt{substituted\_years.csv}.
 
-\noindent We merged the datasets on the country (this led to the dropping of aggregates and territories). These 2 countries do not have a registered HDI\_2023 score: MCO
-and PRK. Where a 2023 World Bank value was missing, we used the most recent earlier year (2018--2022); this was done for 32 values across 19 countries, listed in \texttt{substituted\_years.csv}. We then encoded our target variable and engineered the required features as per the requirements of the project document. The exact datasets used in this project and their sources are in \texttt{Data\_Dictionary.md}.
+\paragraph{Target and feature engineering.} From the merged table, we grouped \texttt{hdi\_2023} into three target classes (\texttt{Level}): $< 0.550$ (Class~0, Low), $0.550\text{--}0.799$ (Class~1, Medium/High), and $\ge 0.800$ (Class~2, Very High). We also computed \texttt{Services} share ($100 - \text{Agriculture} - \text{Industry}$) and \texttt{Dominant\_Sector} (the sector with the largest GDP share). Full column definitions and sources are in \texttt{Data\_Dictionary.md}.
 
 \subsection{Exploratory Data Analysis}
 \label{sec:eda}
 
 \paragraph{Dataset overview.} The dataset covers 195 countries across 14
 columns, including 10 numerical predictors, 2 categorical predictors, 1
-country identifier, and the target variable \texttt{Level}. Most of the processes followed during EDA was derived from the help of the lecture notebook on the same.
-
+country identifier, and the target variable \texttt{Level}. Most of the
+processes followed during EDA were derived with the help of the lecture
+notebook on the same.
 
 \paragraph{Missing value patterns.} \texttt{Region} and
 \texttt{Access\_to\_electricity} have no missing values. In other places, gaps are
-concentrated in the lowest HDI class. This was a common recurring theme that was visible in our dataset. However, it is not universal;  \texttt{Unemployment\_total} is fully reported in Class 0.0 but missing in 8.6\% of Class 1.0 and 8.1\% of Class 2.0 countries.
-Since missingness is therefore not completely at random, we impute with
-training-set medians and add a binary missing-value indicator for each
-numerical feature, so that the information carried by a gap is not lost.
+concentrated in the lowest HDI class, which was a recurring pattern across
+our dataset. However, it is not universal; \texttt{Unemployment\_total} is
+fully reported in Class 0.0 but missing in 8.6\% of Class 1.0 and 8.1\% of
+Class 2.0 countries. Since missingness is therefore not completely at random,
+we impute with training-set medians and add a binary missing-value indicator
+for each numerical feature, so that the information carried by a gap is not
+lost.
 
-\paragraph{Patterns across HDI classes \& feature correlations.} We found several correlations while analysing the indicators, implying that not all of them are fully independent.
+\paragraph{Patterns across HDI classes \& feature correlations.} We found
+several correlations while analysing the indicators (Fig.~\ref{fig:eda}b),
+implying that not all of them are fully independent.
 \texttt{Individuals\_using\_the\_Internet} and \texttt{Infant\_mortality}
 show clear separation across classes. \texttt{Agriculture} decreases with
-HDI, while \texttt{Services} increases. \texttt{Industry}, \texttt{Inflation\_consumer\_prices}, \texttt{Unemployment\_total}, and \texttt{GDP\_Growth} overlap considerably. These positive and negative correlations make intuitive sense and thus reinforce the validity of the dataset
+HDI, while \texttt{Services} increases. \texttt{Industry},
+\texttt{Inflation\_consumer\_prices}, \texttt{Unemployment\_total}, and
+\texttt{GDP\_Growth} overlap considerably. These positive and negative
+correlations make intuitive sense and thus reinforce the validity of the
+dataset.
 
 \paragraph{Categorical feature analysis.} Every labelled country has a World
 Bank region code, and HDI classes split clearly across regions
@@ -108,80 +114,88 @@ better.
   \item \textbf{Split:} Removing rows where HDI is NaN. Dropping country
         name (it does not serve as a predictor). Splitting data into
         test/train/validation (stratified split i.e.\ roughly each class
-        appears in the same amount in each split): 64/16/20, i.e.\
-        123/31/39 countries, \texttt{random\_state=10}.
+        appears in the same amount in each split): 60/20/20, i.e.\
+        115/39/39 countries, \texttt{random\_state=10}.
   \item \textbf{Numerical imputation:} Compared to mean imputation, median
         imputation is more resistant to outliers. As such we went with
         median imputation (our data has many outliers); we found medians
         w.r.t.\ train set. But, it is possible that a value being missing is
         important information to predict the HDI; to account for this
-        possibility, we are adding missing indicators, i.e.\ for each
-        numerical column, we are adding another column where each missing
-        value gets a `1' and rest of the rows are `0'.
-  \item \textbf{Categorical encoding:} missing \texttt{Dominant\_Sector}
+        possibility, we are adding missing indicators (\texttt{add\_indicator=True}),
+        i.e.\ for numerical columns with missing values, we are adding
+        another column where each missing value gets a `1' and rest of the
+        rows are `0'.
+  \item \textbf{Categorical encoding:} Missing \texttt{Dominant\_Sector}
         values (and any missing \texttt{Region}) are filled with
-        ``Missing'', one-hot encoded, and reindexed to the training columns
-        (dealing with unseen categories). This gives 31 columns in total.
-  \item \textbf{Scaling:} \texttt{RobustScaler} on numerical columns in a
-        \texttt{ColumnTransformer} inside a \texttt{Pipeline}; it currently
-        doesn't scale binary values.
-  \item \textbf{PCA:} fit on the training set only, keeping enough
-        components to explain 90\% of the variance. We compared the accuracy
-        score of no PCA vs different number of components using PCA. To
-        calculate the accuracy score we used LR and fit it on training set
-        and predicted on the validation set.
+        ``missing'' and one-hot encoded using
+        \texttt{OneHotEncoder(handle\_unknown="ignore")} (dealing with unseen
+        categories). This gives 30 columns in total.
+  \item \textbf{Scaling:} \texttt{StandardScaler} on the original numerical
+        columns in a \texttt{ColumnTransformer} inside a \texttt{Pipeline};
+        it doesn't scale binary values.
+  \item \textbf{PCA:} Fit on the training set only, checking cumulative
+        explained variance against a 90\% threshold. We compared the accuracy
+        score of no PCA vs different numbers of components (1 to 12) using
+        PCA. To calculate the accuracy score we used LR, Decision Tree, and
+        Random Forest, fit them on the training set and predicted on the
+        validation set.
 \end{itemize}
 
 \subsection{Models and Evaluation}
 
-All models are trained on the PCA components of the training set.
+All models are trained on the PCA components of the training set
+(\texttt{PCA(n\_components=0.9)}, keeping 8 components).
 \begin{itemize}[leftmargin=*]
   \item \textbf{Majority-class baseline:} always predicts the most common
         class in the training set (Class 1.0). Any useful model has to beat
         this.
-  \item \textbf{Multinomial logistic regression (LR):} default
-        \texttt{scikit-learn} settings.
-  \item \textbf{Decision tree} and \textbf{random forest (RF):} default
-        settings with \texttt{random\_state=10}. For RF we compared 1, 10 and
-        100 trees and kept the default of 100.
+  \item \textbf{Multinomial logistic regression (LR):} \texttt{random\_state=10},
+        tuned over $C \in \{0.01, 0.1, 1.0, 10.0\}$ (selecting $C=1$).
+  \item \textbf{Decision tree} and \textbf{random forest (RF):} both use
+        \texttt{random\_state=10}; decision tree is tuned over
+        $\texttt{max\_depth} \in \{1, 3, 7, \text{None}\}$ (selecting $3$),
+        and RF is tuned over $\texttt{n\_estimators} \in \{50, 100, 200\}$
+        (selecting $200$).
 \end{itemize}
 
 \noindent The classes are imbalanced (13\% / 48\% / 38\%), so a model can get
 almost 50\% accuracy by ignoring Class 0.0 entirely. Hence \textbf{macro F1}
 is our main metric; accuracy and balanced accuracy are also reported. Models
-are compared on the validation set and with a repeated-split
-cross-validation: 4 stratified 80/20 splits of the train+validation
-countries, where imputation, encoding, scaling and PCA are refit inside every
-split so no information leaks from the held-out part. The test set is used
-only once, at the very end.
-
+are compared on the validation set and tuned with 5-fold stratified
+cross-validation (\texttt{StratifiedKFold}, \texttt{random\_state=10}) on
+the train+validation countries, where imputation, encoding, scaling and PCA
+are refit inside a \texttt{Pipeline} in every fold so no information leaks
+from the held-out part. We also check LR validation macro F1 across feature
+subsets (numerical-only, categorical-only, and without region or dominant
+sector) and compute test-set permutation importance (30 shuffles). The test
+set is used only once, at the very end.
 \section{Experiments}
 
 \subsection{Preprocessing and PCA}
 
 The class count percentages are approximately the same across train, test
-and validation sets. To inspect principal component loadings, we have
-plotted the first 2 components (that we got after PCA on the training set),
-and their colour depends on their HDI (Fig.~\ref{fig:pca}a). The first two
-components alone explain 74\% of the variance. The classes separate almost
-entirely along PC2, while PC1 mostly spreads out a handful of outliers.
-Table~\ref{tab:loadings} explains why: PC1 is built from inflation, GDP
-growth and trade, the noisy macroeconomic indicators with extreme values,
-whereas PC2 is built from electricity, internet and infant mortality, the
-same living-condition indicators that separated the classes in EDA.
+and validation sets. To inspect how much variance each component captures,
+we have plotted the individual and cumulative explained variance after PCA on
+the training set (Fig.~\ref{fig:pca}a). The first two components alone
+explain about 49\% of the variance. Table~\ref{tab:loadings} shows the top
+features contributing to each component: PC1 is built from internet users,
+infant mortality and agriculture, the living-condition indicators that
+separated the classes in EDA, whereas PC2 is built from GDP growth,
+inflation and industry.
 
-\noindent Six components explain 93.6\% of the variance. Validation accuracy
-(LR) rises to 0.81 at 5 components, stays there up to 7 and then drops
-slightly to 0.77 (Fig.~\ref{fig:pca}b), so the extra components mostly add
-noise. Without PCA, the same LR on all 31 columns scores only 0.74. N=6
-therefore sits on the plateau while using fewer components.
+\noindent Eight components pass the 90\% variance threshold. Validation
+accuracy (LR) rises to 0.85 across 5 to 9 components and then drops to 0.79
+at 10 components (Fig.~\ref{fig:pca}b), so the extra components mostly add
+noise. Without PCA, the same LR on all 30 columns scores only 0.79. N=8
+therefore sits on the plateau while crossing the 90\% variance line with
+fewer components.
 
 \begin{figure}[h]
   \centering
   \begin{subfigure}[b]{0.4\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{pca_scatter.png}
-    \caption{First two components (colour = class).}
+    \includegraphics[width=\linewidth]{pca_variance.png}
+    \caption{Explained variance vs components.}
   \end{subfigure}\hspace{1em}
   \begin{subfigure}[b]{0.4\linewidth}
     \centering
@@ -202,20 +216,19 @@ therefore sits on the plateau while using fewer components.
 \toprule
 PC1 & PC2 & PC3 & PC4 \\
 \midrule
-Inflation & Electricity & Unemployment & GDP growth \\
-GDP growth & Internet & Trade & Industry \\
-Trade & Infant mortality & Agriculture & Services \\
+Internet & GDP growth & Industry & Unemployment \\
+Infant mortality & Inflation & Services & Agriculture \\
+Agriculture & Industry & Inflation & Infant mortality \\
 \bottomrule
 \end{tabular}
 \end{table}
-
 \subsection{Model Comparison}
 
 \begin{table}[h]
 \centering
 \footnotesize
-\caption{Results. Validation and CV use macro F1 (CV: mean $\pm$ std over 4
-splits). Test set: 39 countries.}
+\caption{Results. Validation and CV use macro F1 (CV: mean $\pm$ std over 5
+folds). Test set: 39 countries.}
 \label{tab:results}
 \begin{tabular}{@{}lccccc@{}}
 \toprule
@@ -223,42 +236,41 @@ splits). Test set: 39 countries.}
 \cmidrule(lr){2-3}\cmidrule(l){4-6}
 Model & Val.\ F1 & CV F1 & Accuracy & Bal.\ accuracy & Macro F1 \\
 \midrule
-Majority baseline   & 0.22 & --              & 0.49 & 0.33 & 0.22 \\
-Logistic regression & \textbf{0.82} & \textbf{0.80 $\pm$ 0.03} & 0.92 & 0.89 & 0.92 \\
-Decision tree       & 0.81 & 0.72 $\pm$ 0.07 & 0.74 & 0.77 & 0.73 \\
-Random forest       & 0.68 & 0.72 $\pm$ 0.05 & 0.92 & 0.94 & 0.92 \\
+Majority baseline   & 0.22 & --                    & 0.49 & 0.33 & 0.22 \\
+Logistic regression & \textbf{0.86} & \textbf{0.80 $\pm$ 0.07} & \textbf{0.95} & \textbf{0.96} & \textbf{0.96} \\
+Decision tree       & 0.72 & 0.71 $\pm$ 0.13 & 0.90 & 0.92 & 0.90 \\
+Random forest       & 0.84 & 0.76 $\pm$ 0.05 & \textbf{0.95} & 0.91 & 0.94 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Selection.} All three models beat the baseline by a wide margin
-(Table~\ref{tab:results}). LR has the best validation F1, the best CV F1 and
-the smallest spread across splits, so we picked it as our final model. On
-the test set RF matches LR on accuracy and is slightly ahead on balanced
-accuracy. However, with only 5 Class 0.0 countries in the test set, that gap
-is a single country, so we do not overturn a choice made on validation data.
-The decision tree is the least stable: its CV score varies most between
-splits and it falls to 0.73 on the test set, the usual sign of a single tree
-overfitting. For RF, going from 1 to 10 trees raised CV F1 from 0.61 to
-0.73, and 100 trees gave no further gain (0.72).
+(Table~\ref{tab:results}). LR has the best validation F1 and the best CV F1,
+so we picked it as our final model. On the test set RF matches LR on
+accuracy (0.95) and comes close on macro F1 (0.94 vs.\ 0.96), missing just
+one Class 0.0 country that LR gets right. The decision tree is the least
+stable: its CV score varies most across folds (std 0.13) and it drops to
+0.90 on the test set, the usual sign of a single tree overfitting. Tuning
+\texttt{n\_estimators} over $\{50, 100, 200\}$ for RF picked 200 trees
+(0.76 CV F1).
 
-\paragraph{Errors.} LR places 36 of 39 test countries correctly
-(Fig.~\ref{fig:results}a). All three mistakes are one class away and lie
-close to a cut-off: Moldova (HDI 0.785, Class 1.0 predicted as 2.0),
-Trinidad and Tobago (0.807, 2.0 predicted as 1.0) and Afghanistan (0.496,
-0.0 predicted as 1.0). Countries far from a boundary are never confused.
+\paragraph{Errors.} LR places 37 of 39 test countries correctly
+(Fig.~\ref{fig:results}a). Both mistakes are one class away and lie close
+to the 0.80 cut-off: Moldova (HDI 0.785, Class 1.0 predicted as 2.0) and
+Trinidad and Tobago (0.807, 2.0 predicted as 1.0). Countries far from a
+boundary are never confused.
 
 \paragraph{What the models relied on.} Permutation importance (drop in test
 macro F1 when one original indicator is shuffled, 30 repeats) puts
-\texttt{Access\_to\_electricity} far ahead (0.29 for RF), followed by
-\texttt{Individuals\_using\_the\_Internet} (0.13), \texttt{Agriculture}
-(0.10) and \texttt{Infant\_mortality} (0.08) (Fig.~\ref{fig:results}b); LR
-gives the same top two. The missing-value indicators together score about
-0, so filling the gaps removed most of the signal we expected from them in
-EDA. Likewise, LR trained on the numerical features alone reaches a
-validation F1 of 0.85, against 0.64 for the categorical features alone and
-0.82 for both, so \texttt{Region} and \texttt{Dominant\_Sector} add nothing
-beyond what the indicators already capture.
+\texttt{Access\_to\_electricity} first (0.25 for LR, 0.16 for RF), followed
+by \texttt{Agriculture} (0.15), \texttt{Individuals\_using\_the\_Internet}
+(0.14) and \texttt{Infant\_mortality} (0.14) (Fig.~\ref{fig:results}b); RF
+has the same top four. On the validation set, LR trained on the numerical
+features alone reaches a macro F1 of 0.81, against 0.64 for the categorical
+features alone and 0.86 for both. Dropping \texttt{Region} or
+\texttt{Dominant\_Sector} leaves validation F1 at 0.86, so the continuous
+indicators carry most of the signal while the categorical columns add a
+small boost over numerical features alone.
 
 \begin{figure}[h]
   \centering
@@ -269,18 +281,17 @@ beyond what the indicators already capture.
   \end{subfigure}\hspace{1em}
   \begin{subfigure}[b]{0.5\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{feature_importance.png}
-    \caption{RF permutation importance, test set.}
+    \includegraphics[width=\linewidth]{perm_importance.png}
+    \caption{Permutation importance, test set.}
   \end{subfigure}
   \caption{Final evaluation.}
   \label{fig:results}
 \end{figure}
-
 \subsection{Discussion and Conclusion}
 
 World Bank indicators can predict a country's HDI tier well: our final
-model, a multinomial logistic regression on six PCA components, classifies
-92\% of unseen countries correctly (macro F1 0.92), against 49\% for the
+model, a multinomial logistic regression on eight PCA components, classifies
+95\% of unseen countries correctly (macro F1 0.96), against 49\% for the
 baseline. Most of the signal comes from a few living-condition indicators
 (electricity, internet use, farming share and infant mortality), which
 matches the class separation we saw in EDA. Growth, inflation and
@@ -289,11 +300,9 @@ the classes are close to linearly separable once the data is scaled and
 reduced.
 
 \paragraph{Limitations.} These are associations, not causes: more internet
-access would not by itself raise a country's HDI. We use one year and about
-190 countries, so the test set is small and one country moves accuracy by
+access would not by itself raise a country's HDI. We use one year and 193 countries, so the test set is small and one country moves accuracy by
 2.6 points. The three classes and their cut-offs are our own choice, and
 countries near a cut-off are exactly where the model fails. PCA also makes
 the model harder to interpret directly, which is why we measured importance
 on the original indicators.
-
 \end{document}
