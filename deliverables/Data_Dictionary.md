@@ -19,34 +19,33 @@ Python module used to import api: https://pypi.org/project/wbgapi/
 - This is a csv file that contains the datapoints that were substituted back in using the lookback window
 - **Built by:** `Dataset_Curation.ipynb`
 
--> Note: The following sets are not saved CSVs, just built everytime the code runs
+> **Note:** The following sets are not saved CSVs, just built everytime the code runs
 ### Train / Test / Validation sets (`x_trv`, `y_trv`, `x_te`, `y_te`, `x_tr`, `y_tr`, `x_v`, `y_v`)
 
-- This is the splitting up of the primary dataset for the purpose of model fitting and evaluation
+- This is the splitting up of the primary dataset for the purpose of model fitting and evaluation.
 - **Built by:** `Preprocessing.ipynb`
 
-*Key ->*
- trv: (training + validation) split
- te: test split
- tr: train split
- v: validation split
+**Key:**
+- `trv`: (training + validation) split
+- `te`: test split
+- `tr`: train split
+- `v`: validation split
 
-### Processed sets ('x_tr_clean', 'x_v_clean', 'x_te_clean')
+### Processed sets (`x_tr_clean`, `x_v_clean`, `x_te_clean`)
 - **Built by:** `Preprocessing.ipynb`
-- This is the training, validation and test data after being preprocessed (imputing, OHE, missing indicators etc.)
+- This is the training, validation, and test data after being preprocessed (imputing, OHE, missing indicators, etc.).
 
 ### PCA sets
-- Processed data put through Principal Component Analysis
-- 'components', 'pca_data': **Built by:** `Preprocessing.ipynb` , made from x_tr_clean and x_v_clean respectively
-- 'x_pca_tr', 'x_pca_v': **Built by:** `Training&Evaluation.ipynb` , made from x_tr_clean and x_v_clean 
-### Feature sets
+- Processed data put through Principal Component Analysis.
+- `components`, `pca_data`: **Built by:** `Preprocessing.ipynb`, made from `x_tr_clean` and `x_v_clean` respectively.
+- `x_pca_tr`, `x_pca_v`: **Built by:** `Training&Evaluation.ipynb`, made from `x_tr_clean` and `x_v_clean`.
 
+### Feature sets
 - **Built by:** `Training&Evaluation.ipynb`
-- `x_num_clean`, `x_num_pca`, `x_num_v`: numerical columns only, scaled 
+- `x_num_clean`, `x_num_pca`, `x_num_v`: numerical columns only, scaled
 - `x_cat_clean`, `x_cat_pca`, `x_cat_v`: one-hot and missingness columns only, not scaled
 - `x_combined_pca`, `x_combined_v`: all columns, scaled and PCA
-- 'x_no_region_pca', 'x_no_region_v' : all columns except the region columns
-- 'x_no_sector_pca', 'x_no_sector_v' : all columns except the dominant sector columns
+- `x_no_region_pca`, `x_no_region_v`: all columns except the region columns
+- `x_no_sector_pca`, `x_no_sector_v`: all columns except the dominant sector columns
 
--all '_v' sets are PCA on x_v_clean while (`x_num_clean`,`x_cat_clean`,`x_combined_pca`,'x_no_region_pca','x_no_sector_pca') are based on x_tr_clean
--Rest are based on x_tr_clean but also undergo PCA
+- **Note:** All `*_v` sets are PCA on `x_v_clean`, while `x_num_clean` and `x_cat_clean` are un-transformed subsets of `x_tr_clean`. The remaining `*_pca` sets are derived from `x_tr_clean` and undergo PCA.
