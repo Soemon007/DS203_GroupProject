@@ -39,26 +39,26 @@ Following are the results that we got:
 
  Model                            | Macro F1 
 
- Majority Class Baseline          | 0.22      
- Multinomial Logistic Regression  | 0.86 
- Decision Tree                    | 0.72       
- Random Forest                    | 0.84       
+ Majority Class Baseline          | 0.22\      
+ Multinomial Logistic Regression  | 0.86\ 
+ Decision Tree                    | 0.72\       
+ Random Forest                    | 0.84\       
 
 ### 5-fold Hyperparameter tuning
 
- Model                            | Hyperparameter      || Mean macro F1 
+ Model                            | Hyperparameter      || Mean macro F1
      
- Multinomial Logistic Regression  | C=1                 || 0.801
- Decision Tree                    | max_depth=3         || 0.708     
- Random Forest                    | n_estimators = 200  || 0.759 
+ Multinomial Logistic Regression  | C=1                 || 0.801\
+ Decision Tree                    | max_depth=3         || 0.708\  
+ Random Forest                    | n_estimators = 200  || 0.759\ 
 
  ### Test 
 
   Model                            | macro F1 
      
-  Multinomial Logistic Regression  | 0.96
-  Decision Tree                    | 0.90    
-  Random Forest                    | 0.93
+  Multinomial Logistic Regression  | 0.96\
+  Decision Tree                    | 0.90\    
+  Random Forest                    | 0.93\
 
  
 ### Takeaways / Observations
