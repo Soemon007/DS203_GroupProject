@@ -32,34 +32,32 @@ We compare a majority-class baseline, multinomial logistic regression, a decisio
 
 ## Results
 
-Models were trained on PCA features (components covering >=90% of variance) after median imputation, missingness indicators and one-hot encoding.
-Following are the results that we got:
+Models were trained on PCA features (components covering >=90% of variance) after median imputation, missingness indicators, and one-hot encoding. Following are the results:
 
-###  Validation (single stratified split)
+### Validation (single stratified split)
 
- Model                            | Macro F1 
+| Model | Macro F1 |
+| :--- | :---: |
+| Majority Class Baseline | 0.22 |
+| Multinomial Logistic Regression | 0.86 |
+| Decision Tree | 0.72 |
+| Random Forest | 0.84 |
 
- Majority Class Baseline          | 0.22\      
- Multinomial Logistic Regression  | 0.86\ 
- Decision Tree                    | 0.72\       
- Random Forest                    | 0.84\       
+### 5-fold Hyperparameter Tuning
 
-### 5-fold Hyperparameter tuning
+| Model | Hyperparameter | Mean Macro F1 |
+| :--- | :--- | :---: |
+| Multinomial Logistic Regression | `C=1` | 0.801 |
+| Decision Tree | `max_depth=3` | 0.708 |
+| Random Forest | `n_estimators=200` | 0.759 |
 
- Model                            | Hyperparameter      || Mean macro F1
-     
- Multinomial Logistic Regression  | C=1                 || 0.801\
- Decision Tree                    | max_depth=3         || 0.708\  
- Random Forest                    | n_estimators = 200  || 0.759\ 
+### Test
 
- ### Test 
-
-  Model                            | macro F1 
-     
-  Multinomial Logistic Regression  | 0.96\
-  Decision Tree                    | 0.90\    
-  Random Forest                    | 0.93\
-
+| Model | Macro F1 |
+| :--- | :---: |
+| Multinomial Logistic Regression | 0.96 |
+| Decision Tree | 0.90 |
+| Random Forest | 0.93 |
  
 ### Takeaways / Observations
 - Every model performs better than the baseline, implying that the signal suggested in the problem statement is real
