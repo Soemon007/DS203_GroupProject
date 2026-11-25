@@ -23,20 +23,27 @@ We compare a majority-class baseline, multinomial logistic regression, a decisio
 ## Repository Structure
 
 ```text
-.
 ├── code                      # This folder contains all the relevant jupyter notebooks
 ├── deliverables              # This folder contains the final report, data dictionary and the primary dataset used in the project
 ├── data                      # This folder contains the main sources of data
 └── README.md
 ```
-
 --- 
 
 ## Results
 
-   Model                     |   Accuracy
+Models were trained on PCA features (components covering >=90% of variance) after median imputation, missingness indicators and one-hot encoding.
+Following are the results that we got:
 
- - Random Forest              |
- - Decision Tree              |
- - Logistic Regression        |
- - Majority Class Baseline    |
+### Validation (single stratified split)
+
+ Model                            | Macro F1 
+
+ Majority Class Baseline          | 0.22     
+ Multinomial Logistic Regression  | **0.82** 
+ Decision Tree                    | 0.67     
+ Random Forest                    | 0.65     
+
+### Takeaways / Observations
+- Every model performs better than the baseline, implying that the signal suggested in the problem statement is real
+- Logistic regression did the best on validation. Its edge over the tree models suggests that maybe the classes are close to linearly separable once PCA is applied.
