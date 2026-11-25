@@ -35,15 +35,32 @@ We compare a majority-class baseline, multinomial logistic regression, a decisio
 Models were trained on PCA features (components covering >=90% of variance) after median imputation, missingness indicators and one-hot encoding.
 Following are the results that we got:
 
-### Validation (single stratified split)
+###  Validation (single stratified split)
 
  Model                            | Macro F1 
 
  Majority Class Baseline          | 0.22      
- Multinomial Logistic Regression  | 0.82  
- Decision Tree                    | 0.67       
- Random Forest                    | 0.65       
+ Multinomial Logistic Regression  | 0.86 
+ Decision Tree                    | 0.72       
+ Random Forest                    | 0.84       
 
+### 5-fold Hyperparameter tuning
+
+ Model                            | Hyperparameter      || Mean macro F1 
+     
+ Multinomial Logistic Regression  | C=1                 || 0.801
+ Decision Tree                    | max_depth=3         || 0.708     
+ Random Forest                    | n_estimators = 200  || 0.759 
+
+ ### Test 
+
+  Model                            | macro F1 
+     
+  Multinomial Logistic Regression  | 0.96
+  Decision Tree                    | 0.90    
+  Random Forest                    | 0.93
+
+ 
 ### Takeaways / Observations
 - Every model performs better than the baseline, implying that the signal suggested in the problem statement is real
-- Logistic regression did the best on validation. Its edge over the tree models suggests that maybe the classes are close to linearly separable once PCA is applied.
+- Logistic regression did the best on validation and testing. Its edge over the tree models suggests that maybe the features have a linear relationship with HDI and thus Logistic regression which assigns a weight to each feature and    assumes linearity is able to predict HDI better than tree models which make sharp decisions.
