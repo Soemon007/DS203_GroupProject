@@ -40,7 +40,7 @@ Following are the results that we got:
  Model                            | Macro F1 
 
  Majority Class Baseline          | 0.22     
- Multinomial Logistic Regression  | **0.82** 
+ Multinomial Logistic Regression  | 0.82
  Decision Tree                    | 0.67     
  Random Forest                    | 0.65     
 
